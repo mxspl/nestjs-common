@@ -1,0 +1,76 @@
+{
+  "name": "@mxspl/nestjs-gql",
+  "version": "0.1.0",
+  "description": "Reusable GraphQL helpers for NestJS microservices.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/graphql": "^13.0.0",
+    "graphql": "^16.0.0",
+    "reflect-metadata": "^0.2.0",
+    "typeorm": "^0.3.0"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.1.21",
+    "@nestjs/graphql": "^13.4.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.12.4",
+    "graphql": "^16.14.0",
+    "jest": "^30.4.2",
+    "reflect-metadata": "^0.2.2",
+    "ts-jest": "^29.4.9",
+    "typeorm": "^0.3.29",
+    "typescript": "^6.0.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "<rootDir>/../tsconfig.spec.json"
+        }
+      ]
+    },
+    "coverageProvider": "v8",
+    "collectCoverageFrom": [
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/index.ts",
+      "!**/*.d.ts",
+      "!**/*.types.ts",
+      "!**/*.input.ts"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
+}

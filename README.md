@@ -1,5 +1,7 @@
 # @mxspl/nestjs-gql
 
+[![Test](https://github.com/mxspl/nestjs-gql/actions/workflows/test.yml/badge.svg)](https://github.com/mxspl/nestjs-gql/actions/workflows/test.yml)
+
 Reusable GraphQL helpers for NestJS services.
 
 ## Install
