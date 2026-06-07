@@ -16,10 +16,13 @@ type BuildContext = {
   params: Record<string, unknown>;
 };
 
-export function applyGraphqlFilters<T extends ObjectLiteral>(
+export function applyGraphqlFilters<
+  T extends ObjectLiteral,
+  TFilter extends GraphqlLogicalFilterNode<TFilter>,
+>(
   queryBuilder: SelectQueryBuilder<T>,
   alias: string,
-  filters: Record<string, unknown> | undefined,
+  filters: TFilter | undefined,
   fieldTypes: Record<string, GraphqlFilterFieldType>,
 ): void {
   if (!filters) {
