@@ -6,6 +6,7 @@
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=mxspl_nestjs-common&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=mxspl_nestjs-common)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mxspl_nestjs-common&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mxspl_nestjs-common)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mxspl_nestjs-common&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mxspl_nestjs-common)
+
 Reusable common helpers for NestJS services.
 
 ## Install

@@ -2,6 +2,19 @@
   "name": "@mxspl/nestjs-common",
   "version": "0.1.1",
   "description": "Reusable common helpers for NestJS services.",
+  "author": {
+    "name": "Maxspell",
+    "email": "hello@maxspell.com",
+    "url": "https://maxspell.com"
+  },
+  "keywords": [
+    "nestjs",
+    "graphql",
+    "typeorm",
+    "relay",
+    "pagination",
+    "filters"
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public"
