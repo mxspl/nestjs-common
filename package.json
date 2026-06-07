@@ -1,6 +1,6 @@
 {
   "name": "@mxspl/nestjs-common",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reusable common helpers for NestJS services.",
   "author": {
     "name": "Maxspell",
