@@ -118,7 +118,8 @@ function buildLogicalGroup(
     return '';
   }
 
-  return `(${children.join(` ${joinOperator} `)})`;
+  const separator = ` ${joinOperator} `;
+  return `(${children.join(separator)})`;
 }
 
 function buildNotGroup(filters: unknown, context: BuildContext): string {
