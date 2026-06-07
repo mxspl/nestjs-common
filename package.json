@@ -1,7 +1,7 @@
 {
-  "name": "@mxspl/nestjs-gql",
+  "name": "@mxspl/nestjs-common",
   "version": "0.1.0",
-  "description": "Reusable GraphQL helpers for NestJS microservices.",
+  "description": "Reusable common helpers for NestJS services.",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

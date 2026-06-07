@@ -1,13 +1,13 @@
-# @mxspl/nestjs-gql
+# @mxspl/nestjs-common
 
 [![Test](https://github.com/mxspl/nestjs-gql/actions/workflows/test.yml/badge.svg)](https://github.com/mxspl/nestjs-gql/actions/workflows/test.yml)
 
-Reusable GraphQL helpers for NestJS services.
+Reusable common helpers for NestJS services.
 
 ## Install
 
 ```bash
-pnpm add @mxspl/nestjs-gql
+pnpm add @mxspl/nestjs-common
 ```
 
 ## What it provides
@@ -28,5 +28,5 @@ import {
   buildRelayConnection,
   BooleanFilterOperatorsInput,
   StringFilterOperatorsInput,
-} from '@mxspl/nestjs-gql';
+} from '@mxspl/nestjs-common';
 ```
