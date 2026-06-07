@@ -39,9 +39,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "lint": "biome check --write .",
-    "prepublish": "pnpm run clean && pnpm run lint && pnpm run build",
-    "release": "pnpm dlx standard-version && git push --follow-tags origin main",
-    "publish": "pnpm run prepublish && npm publish --access public"
+    "release": "pnpm dlx standard-version && git push --follow-tags origin main && npm publish"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
