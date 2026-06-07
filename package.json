@@ -28,7 +28,7 @@
     "lint": "biome check --write .",
     "prepublish": "pnpm run clean && pnpm run lint && pnpm run build",
     "release": "pnpm dlx standard-version && git push --follow-tags origin main",
-    "publish": "pnpm run prepublish &&npm publish --access public"
+    "publish": "pnpm run prepublish && npm publish --access public"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
