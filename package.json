@@ -24,7 +24,11 @@
     "clean": "rm -rf dist",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "lint": "biome check --write .",
+    "prepublish": "pnpm run clean && pnpm run lint && pnpm run build",
+    "release": "pnpm dlx standard-version && git push --follow-tags origin main",
+    "publish": "pnpm run prepublish &&npm publish --access public"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
@@ -34,6 +38,7 @@
     "typeorm": "^0.3.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.16",
     "@nestjs/common": "^11.1.21",
     "@nestjs/graphql": "^13.4.0",
     "@types/jest": "^30.0.0",

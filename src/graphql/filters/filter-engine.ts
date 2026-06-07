@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { type ObjectLiteral, type SelectQueryBuilder } from 'typeorm';
+import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 export type GraphqlFilterFieldType = 'string' | 'boolean' | 'number' | 'date';
 
@@ -16,9 +16,7 @@ type BuildContext = {
   params: Record<string, unknown>;
 };
 
-export function applyGraphqlFilters<
-  T extends ObjectLiteral,
->(
+export function applyGraphqlFilters<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
   alias: string,
   filters: Record<string, unknown> | undefined,
@@ -297,7 +295,10 @@ function setParam(context: BuildContext, value: unknown): string {
   return name;
 }
 
-function requireStringType(operator: string, fieldType: GraphqlFilterFieldType): void {
+function requireStringType(
+  operator: string,
+  fieldType: GraphqlFilterFieldType,
+): void {
   if (fieldType !== 'string') {
     throw new BadRequestException(
       `Operator "${operator}" only supports string fields.`,

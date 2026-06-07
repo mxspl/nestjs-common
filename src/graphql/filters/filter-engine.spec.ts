@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { type SelectQueryBuilder } from 'typeorm';
+import type { SelectQueryBuilder } from 'typeorm';
 import { applyGraphqlFilters } from './filter-engine';
 
 type QueryBuilderMock = {
@@ -17,10 +17,17 @@ function applyFilters(
   filters: unknown,
   fieldTypes: Record<string, 'string' | 'boolean' | 'number' | 'date'>,
 ): void {
-  (applyGraphqlFilters as any)(
+  (
+    applyGraphqlFilters as unknown as (
+      queryBuilder: SelectQueryBuilder<{ id: string }>,
+      alias: string,
+      filters: Record<string, unknown> | undefined,
+      fieldTypes: Record<string, 'string' | 'boolean' | 'number' | 'date'>,
+    ) => void
+  )(
     queryBuilder as unknown as SelectQueryBuilder<{ id: string }>,
     'entity',
-    filters,
+    filters as Record<string, unknown> | undefined,
     fieldTypes,
   );
 }
