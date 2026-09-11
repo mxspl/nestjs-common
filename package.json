@@ -36,11 +36,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
+    "prepack": "npm run clean && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "lint": "biome check --write .",
-    "release": "pnpm dlx standard-version && git push --follow-tags origin main && npm publish"
+    "release": "pnpm dlx standard-version && git push --follow-tags origin main"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0 || ^12.0.0",
