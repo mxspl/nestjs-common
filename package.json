@@ -1,6 +1,6 @@
 {
   "name": "@mxspl/nestjs-common",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Reusable common helpers for NestJS services.",
   "author": {
     "name": "Maxspell",
@@ -35,58 +35,29 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
     "lint": "biome check --write .",
     "release": "pnpm dlx standard-version && git push --follow-tags origin main && npm publish"
   },
   "peerDependencies": {
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/graphql": "^13.0.0",
-    "graphql": "^16.0.0",
+    "@nestjs/common": "^11.0.0 || ^12.0.0",
+    "@nestjs/graphql": "^13.0.0 || ^14.0.0",
+    "graphql": "^16.0.0 || ^17.0.0",
     "reflect-metadata": "^0.2.0",
-    "typeorm": "^0.3.0"
+    "typeorm": "^0.3.0 || ^1.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@nestjs/common": "^11.1.21",
-    "@nestjs/graphql": "^13.4.0",
-    "@types/jest": "^30.0.0",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/graphql": "^14.0.0",
     "@types/node": "^24.12.4",
-    "graphql": "^16.14.0",
-    "jest": "^30.4.2",
+    "@vitest/coverage-v8": "^4.1.2",
+    "graphql": "^17.0.2",
     "reflect-metadata": "^0.2.2",
-    "ts-jest": "^29.4.9",
-    "typeorm": "^0.3.29",
-    "typescript": "^6.0.3"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": [
-        "ts-jest",
-        {
-          "tsconfig": "<rootDir>/../tsconfig.spec.json"
-        }
-      ]
-    },
-    "coverageProvider": "v8",
-    "collectCoverageFrom": [
-      "**/*.(t|j)s",
-      "!**/*.spec.ts",
-      "!**/index.ts",
-      "!**/*.d.ts",
-      "!**/*.types.ts",
-      "!**/*.input.ts"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "typeorm": "^1.1.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.2"
   }
 }

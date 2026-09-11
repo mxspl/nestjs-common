@@ -5,7 +5,7 @@
     "moduleResolution": "Node",
     "ignoreDeprecations": "6.0",
     "lib": ["ES2023"],
-    "types": ["node", "jest"],
+    "types": ["node", "vitest/globals"],
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,

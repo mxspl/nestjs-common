@@ -36,9 +36,10 @@ These instructions apply to the whole repository.
 ## Tests
 
 - Put tests next to the implementation as `*.spec.ts` files under `src/`.
-- Extend or add focused Jest tests for behavior changes.
+- Extend or add focused Vitest tests for behavior changes.
 - Prefer behavior-focused mocks for TypeORM query builders and repositories instead of asserting internal implementation details.
 - Preserve the current coverage exclusions for spec files, barrel files, `.d.ts`, `.types.ts`, and `.input.ts` files.
+- Test globals (`describe`, `it`, `expect`, `vi`, etc.) are enabled via `vitest.config.ts`; no explicit imports needed.
 
 ## Commands
 

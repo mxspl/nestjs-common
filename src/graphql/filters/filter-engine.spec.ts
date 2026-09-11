@@ -3,12 +3,12 @@ import type { SelectQueryBuilder } from 'typeorm';
 import { applyGraphqlFilters } from './filter-engine';
 
 type QueryBuilderMock = {
-  andWhere: jest.Mock;
+  andWhere: ReturnType<typeof vi.fn>;
 };
 
 function createQueryBuilder(): QueryBuilderMock {
   return {
-    andWhere: jest.fn(),
+    andWhere: vi.fn(),
   };
 }
 

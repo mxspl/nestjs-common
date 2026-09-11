@@ -13,29 +13,29 @@ type EdgeRow = {
 };
 
 type QueryBuilderMock = {
-  where: jest.Mock;
-  orderBy: jest.Mock;
-  addOrderBy: jest.Mock;
-  take: jest.Mock;
-  andWhere: jest.Mock;
-  getMany: jest.Mock;
+  where: ReturnType<typeof vi.fn>;
+  orderBy: ReturnType<typeof vi.fn>;
+  addOrderBy: ReturnType<typeof vi.fn>;
+  take: ReturnType<typeof vi.fn>;
+  andWhere: ReturnType<typeof vi.fn>;
+  getMany: ReturnType<typeof vi.fn>;
 };
 
 describe('buildRelayConnection', () => {
   let repository: {
-    createQueryBuilder: jest.Mock;
-    count: jest.Mock;
+    createQueryBuilder: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
   };
   let queryBuilder: QueryBuilderMock;
 
   beforeEach(() => {
     queryBuilder = {
-      where: jest.fn(),
-      orderBy: jest.fn(),
-      addOrderBy: jest.fn(),
-      take: jest.fn(),
-      andWhere: jest.fn(),
-      getMany: jest.fn(),
+      where: vi.fn(),
+      orderBy: vi.fn(),
+      addOrderBy: vi.fn(),
+      take: vi.fn(),
+      andWhere: vi.fn(),
+      getMany: vi.fn(),
     };
 
     queryBuilder.where.mockReturnValue(queryBuilder);
@@ -45,8 +45,8 @@ describe('buildRelayConnection', () => {
     queryBuilder.andWhere.mockReturnValue(queryBuilder);
 
     repository = {
-      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
-      count: jest.fn(),
+      createQueryBuilder: vi.fn().mockReturnValue(queryBuilder),
+      count: vi.fn(),
     };
   });
 
@@ -86,12 +86,12 @@ describe('buildRelayConnection', () => {
     const bracketsArg = queryBuilder.andWhere.mock.calls[0][0] as Brackets;
     expect(bracketsArg).toBeInstanceOf(Brackets);
 
-    const orWhere = jest.fn();
-    const where = jest.fn().mockReturnValue({ orWhere });
+    const orWhere = vi.fn();
+    const where = vi.fn().mockReturnValue({ orWhere });
 
     (
       bracketsArg as unknown as {
-        whereFactory: (qb: { where: jest.Mock }) => void;
+        whereFactory: (qb: { where: ReturnType<typeof vi.fn> }) => void;
       }
     ).whereFactory({ where });
 
@@ -167,7 +167,7 @@ describe('buildRelayConnection', () => {
       },
     ]);
 
-    const getTotalCount = jest.fn().mockResolvedValue(3);
+    const getTotalCount = vi.fn().mockResolvedValue(3);
 
     const result = await buildRelayConnection<NodeRow, EdgeRow>({
       repository: repository as unknown as Repository<NodeRow>,

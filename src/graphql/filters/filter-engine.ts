@@ -55,7 +55,7 @@ function buildNodeExpression(node: unknown, context: BuildContext): string {
       continue;
     }
 
-    if (!(key in context.fieldTypes)) {
+    if (!Object.hasOwn(context.fieldTypes, key)) {
       throw new BadRequestException(`Unknown filter field: ${key}`);
     }
 
