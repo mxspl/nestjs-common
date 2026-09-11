@@ -33,6 +33,9 @@
     "README.md",
     "LICENSE"
   ],
+  "dependencies": {
+    "jose": "^6.2.12"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
@@ -45,18 +48,24 @@
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0 || ^12.0.0",
+    "@nestjs/config": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0",
     "@nestjs/graphql": "^13.0.0 || ^14.0.0",
+    "@nestjs/passport": "^11.0.0 || ^12.0.0",
     "graphql": "^16.0.0 || ^17.0.0",
+    "passport-custom": "^1.2.0",
     "reflect-metadata": "^0.2.0",
     "typeorm": "^0.3.0 || ^1.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
     "@nestjs/common": "^12.0.1",
+    "@nestjs/config": "^12.0.0",
     "@nestjs/graphql": "^14.0.0",
+    "@nestjs/passport": "^12.0.0",
     "@types/node": "^24.12.4",
     "@vitest/coverage-v8": "^4.1.2",
     "graphql": "^17.0.2",
+    "passport-custom": "^1.2.1",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^1.1.1",
     "typescript": "^6.0.3",
