@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/mxspl/nestjs-common/compare/v0.1.2...v0.2.1) (2026-09-11)
+
+
+### Features
+
+* widen peerDependencies and migrate tests to Vitest ([3e4f051](https://github.com/mxspl/nestjs-common/commit/3e4f05178b830494de6e282e0c75fd64e8f541f0))
+
 ### [0.2.0](https://github.com/mxspl/nestjs-common/compare/v0.1.2...v0.2.0) (2026-09-11)
 
 ### Features
