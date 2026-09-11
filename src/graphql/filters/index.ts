@@ -1,2 +1,2 @@
-export * from './filter-engine';
-export * from './filter-operators.input';
+export * from './filter-engine.js';
+export * from './filter-operators.input.js';

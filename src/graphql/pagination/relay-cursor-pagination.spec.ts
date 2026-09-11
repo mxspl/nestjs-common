@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Brackets, type Repository } from 'typeorm';
-import { buildRelayConnection } from './relay-cursor-pagination';
+import { buildRelayConnection } from './relay-cursor-pagination.js';
 
 type NodeRow = {
   id: string;

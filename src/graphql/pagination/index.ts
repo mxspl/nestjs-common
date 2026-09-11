@@ -1,1 +1,1 @@
-export * from './relay-cursor-pagination';
+export * from './relay-cursor-pagination.js';

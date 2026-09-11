@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { SelectQueryBuilder } from 'typeorm';
-import { applyGraphqlFilters } from './filter-engine';
+import { applyGraphqlFilters } from './filter-engine.js';
 
 type QueryBuilderMock = {
   andWhere: ReturnType<typeof vi.fn>;

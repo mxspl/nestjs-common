@@ -1,3 +1,3 @@
 import 'reflect-metadata';
 
-export * from './graphql';
+export * from './graphql/index.js';

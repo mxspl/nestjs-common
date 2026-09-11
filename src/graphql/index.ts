@@ -1,3 +1,3 @@
-export * from './filters';
-export * from './pagination';
-export * from './relay-connection.types';
+export * from './filters/index.js';
+export * from './pagination/index.js';
+export * from './relay-connection.types.js';

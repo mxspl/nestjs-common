@@ -14,7 +14,7 @@ These instructions apply to the whole repository.
 
 - Keep changes small and localized. Do not refactor unrelated areas while fixing a focused issue.
 - Preserve strict TypeScript typing. Avoid `any`; prefer `unknown`, explicit types, and narrow casts only when necessary.
-- Maintain current module style: CommonJS build output, decorators for GraphQL types, and TypeORM query-builder integration.
+- Maintain current module style: native ESM build output, decorators for GraphQL types, and TypeORM query-builder integration.
 - Keep public exports aligned. If you add a public feature, update the relevant barrel export files.
 - Do not edit generated or derived output in `dist/` or `coverage/`.
 
