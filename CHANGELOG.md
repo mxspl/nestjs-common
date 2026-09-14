@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.4](https://github.com/mxspl/nestjs-common/compare/v0.2.3...v0.2.4) (2026-09-14)
+
+
+### Features
+
+* add JWT authentication with remote JWKS support ([1a9b67b](https://github.com/mxspl/nestjs-common/commit/1a9b67bc3aeb8cd4d9c6f31f5ddd5b5618176815))
+
 ### [0.2.3](https://github.com/mxspl/nestjs-common/compare/v0.2.2...v0.2.3) (2026-09-11)
 
 ### [0.2.2](https://github.com/mxspl/nestjs-common/compare/v0.2.1...v0.2.2) (2026-09-11)
