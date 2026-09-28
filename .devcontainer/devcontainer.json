@@ -14,7 +14,6 @@
         "biomejs.biome",
         "-dbaeumer.vscode-eslint",
         "DavidAnson.vscode-markdownlint"
-        // "meta.relay"
       ],
       "settings": {
         "editor.formatOnSave": true,

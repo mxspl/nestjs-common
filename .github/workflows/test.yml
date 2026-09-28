@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
 permissions:
   contents: read

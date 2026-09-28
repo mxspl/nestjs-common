@@ -11,12 +11,24 @@ Reusable common helpers for NestJS services.
 
 ## Install
 
+To install from GitHub Packages, configure the scoped registry and authenticate
+with a token that can read packages:
+
+```ini
+@mxspl:registry=https://npm.pkg.github.com
+```
+
 ```bash
 pnpm add @mxspl/nestjs-common
 ```
 
+Push a `v<version>` tag matching the version in `package.json` to run tests and
+publish that version to GitHub Packages. Publishing requires the repository's
+GitHub Actions token to have package write access.
+
 ## What it provides
 
+- Structured JSON logging with asynchronous correlation IDs.
 - JWT authentication helpers backed by a remote JWKS endpoint.
 - Relay connection types for `PageInfo`, edges, and connections.
 - Query-builder filter application helpers for TypeORM.
@@ -24,6 +36,47 @@ pnpm add @mxspl/nestjs-common
 - Reusable string and boolean filter input classes.
 
 ## Usage
+
+### JSON logging
+
+`JsonLogger` and `withCorrelation` are exported from the package root and from
+`@mxspl/nestjs-common/logging`. Use the logging entry point in services that do
+not use the authentication or GraphQL helpers; it avoids loading those modules.
+
+Create the logger before bootstrapping Nest so startup logs use the same format:
+
+```ts
+import { JsonLogger, withCorrelation } from '@mxspl/nestjs-common/logging';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module.js';
+
+const logger = new JsonLogger(process.env.LOG_LEVEL ?? 'log');
+const app = await NestFactory.create(AppModule, { logger });
+await app.listen(process.env.PORT ?? 3000);
+
+await withCorrelation('request-123', async () => {
+  logger.log('Operation completed', 'Worker');
+});
+```
+
+When injecting the logger into application providers, register that same instance
+with `{ provide: JsonLogger, useValue: logger }` in the owning module (or use a
+factory provider). Passing the logger to `NestFactory` configures Nest's logger;
+it does not automatically register an injectable provider.
+
+Output is newline-delimited JSON on stdout with `time`, `level`, `message`, an
+optional string `context`, and `correlationId` when inside `withCorrelation`.
+Supported thresholds are `debug`, `log` (default), `warn`, and `error`; `setLevel`
+updates the threshold. `verbose` maps to `debug`, and `fatal` maps to `error`.
+Correlation IDs accept 1–128 letters, digits, underscores, or hyphens; invalid or
+missing IDs become `unknown`. Correlation state follows asynchronous work and is
+isolated between concurrent callbacks. HTTP/message handlers must establish it
+explicitly with `withCorrelation`.
+
+Non-string messages, including error objects, become `Service operation failed`;
+non-string context and error stack arguments are not serialized. String messages
+and contexts are emitted as supplied, so use static messages and never include
+credentials, OTPs, recipients, or raw payloads in them.
 
 ### JWT authentication
 
