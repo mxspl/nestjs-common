@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.6](https://github.com/mxspl/nestjs-common/compare/v0.2.5...v0.2.6) (2026-09-28)
+
+
+### Features
+
+* introduce durable NATS JetStream event transport ([cd6cd40](https://github.com/mxspl/nestjs-common/commit/cd6cd405cb3c96a452d278fe415c8c3bddd67123))
+
 ### [0.2.5](https://github.com/mxspl/nestjs-common/compare/v0.2.4...v0.2.5) (2026-09-28)
 
 
