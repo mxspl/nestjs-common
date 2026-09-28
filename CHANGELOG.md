@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.5](https://github.com/mxspl/nestjs-common/compare/v0.2.4...v0.2.5) (2026-09-28)
+
+
+### Features
+
+* add structured JSON logging and GitHub Packages publishing ([4b2a13f](https://github.com/mxspl/nestjs-common/commit/4b2a13fe60822a88057c3b79660553e1d04fed8a))
+
 ### [0.2.4](https://github.com/mxspl/nestjs-common/compare/v0.2.3...v0.2.4) (2026-09-14)
 
 
