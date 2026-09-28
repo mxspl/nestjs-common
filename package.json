@@ -30,6 +30,10 @@
     "./logging": {
       "types": "./dist/logging/index.d.ts",
       "import": "./dist/logging/index.js"
+    },
+    "./jetstream": {
+      "types": "./dist/jetstream/index.d.ts",
+      "import": "./dist/jetstream/index.js"
     }
   },
   "files": [
@@ -58,7 +62,11 @@
     "graphql": "^16.0.0 || ^17.0.0",
     "passport-custom": "^1.2.0",
     "reflect-metadata": "^0.2.0",
-    "typeorm": "^0.3.0 || ^1.0.0"
+    "typeorm": "^0.3.0 || ^1.0.0",
+    "@nats-io/jetstream": "^3.4.0",
+    "@nats-io/transport-node": "^3.4.0",
+    "@nestjs/microservices": "^12.1.1",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
@@ -73,6 +81,24 @@
     "reflect-metadata": "^0.2.2",
     "typeorm": "^1.1.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "@nats-io/jetstream": "^3.4.0",
+    "@nats-io/transport-node": "^3.4.0",
+    "@nestjs/microservices": "^12.1.1",
+    "rxjs": "^7.8.2"
+  },
+  "peerDependenciesMeta": {
+    "@nats-io/jetstream": {
+      "optional": true
+    },
+    "@nats-io/transport-node": {
+      "optional": true
+    },
+    "@nestjs/microservices": {
+      "optional": true
+    },
+    "rxjs": {
+      "optional": true
+    }
   }
 }

@@ -28,6 +28,7 @@ GitHub Actions token to have package write access.
 
 ## What it provides
 
+- Durable NATS JetStream event transport with configurable retry and failure policies.
 - Structured JSON logging with asynchronous correlation IDs.
 - JWT authentication helpers backed by a remote JWKS endpoint.
 - Relay connection types for `PageInfo`, edges, and connections.
@@ -77,6 +78,101 @@ Non-string messages, including error objects, become `Service operation failed`;
 non-string context and error stack arguments are not serialized. String messages
 and contexts are emitted as supplied, so use static messages and never include
 credentials, OTPs, recipients, or raw payloads in them.
+
+### NATS JetStream events
+
+Import from `@mxspl/nestjs-common/jetstream`. This separate entry point keeps
+NATS and Nest microservices out of the root and logging import graphs. Install
+its optional peers in services that use the transport:
+
+```sh
+pnpm add @nestjs/microservices@^12.1.1 @nats-io/jetstream@^3.4.0 @nats-io/transport-node@^3.4.0 rxjs@^7.8.2
+```
+
+Nest microservices 12.1.1 or later in the 12.x series is required for event
+handler errors to propagate back to the transport. Register handlers on Nest
+controllers with `@EventPattern('your.subject')`, and register those controllers
+in the application's module graph. Payloads are decoded as JSON; validate their
+schema in the handler. `@Ctx() context: JetStreamContext` exposes the message ID,
+subject, headers, delivery count, and redelivery count.
+
+```ts
+import { ServerJetStream } from '@mxspl/nestjs-common/jetstream';
+
+// Illustrative configuration for a future signup consumer, not an existing
+// event contract. Define the shared schema and publish it from auth first.
+const transport = new ServerJetStream({
+  connection: { servers: ['nats://nats:4222'] },
+  stream: { name: 'USER_EVENTS', maxAgeMs: 7 * 24 * 60 * 60 * 1000 },
+  durable: 'org-default-team',
+  manageStreams: true,
+  ackWaitMs: 60_000,
+  maxDeliver: 5,
+  retryDelayMs: 1000,
+  deadLetter: {
+    stream: 'ORG_EVENT_FAILURES',
+    subject: 'org.events.failed',
+    maxAgeMs: 7 * 24 * 60 * 60 * 1000,
+  },
+});
+app.connectMicroservice({ strategy: transport });
+await app.init();
+await app.startAllMicroservices();
+```
+
+Pass a logger as the optional second constructor argument. For dependency
+injection, register a factory provider for `ServerJetStream` and pass
+`app.get(ServerJetStream)` to `connectMicroservice`. `healthy()` probes the
+connection and consumption loops; enable Nest shutdown hooks to stop pulling,
+finish in-flight handlers, and drain the connection on shutdown.
+
+Each handler pattern gets a durable pull consumer, with one in-flight message
+per pattern and explicit acknowledgements. A single pattern uses `durable`
+verbatim; multiple patterns append a stable hash of each pattern. Keep this
+handler set stable: moving between one and multiple patterns changes durable
+names and can replay retained events. Replicas share the durable name; separate
+services need distinct durable names to each receive events. Handler patterns
+must be string subjects; configured streams must list those exact subjects
+(including `subjectPrefix`, when used). Wildcard coverage in existing stream
+configuration is not inferred. `manageStreams: false` disables stream creation,
+but still inspects streams and creates/updates consumers. Existing stream
+retention must be positive and no longer than the configured `maxAgeMs`; stream
+configuration is never silently overwritten.
+
+The transport acknowledges only after a Promise or Observable handler completes.
+It extends the acknowledgement window while the handler runs. Unknown handler
+errors retry with exponential backoff capped at thirty seconds. A service can
+supply `classifyError(error)` returning `{ reason, retryable }`; permanent errors
+terminate immediately. Use static reason codes, since termination reasons are
+sent to the broker. Invalid JSON terminates before the handler runs.
+
+After `maxDeliver` handler attempts, a failure record is published before the
+source message is terminated. Publication failures retry without invoking the
+handler again. Broker redelivery is therefore unlimited, bounded by stream
+retention. Default failure records contain only `messageId`, source subject,
+stream/sequence, attempts, `retry_exhausted`, and a timestamp. IDs outside the
+safe correlation-ID format are omitted. `deadLetter.createPayload` can adapt
+this metadata to a service's existing failure contract. Optional `metrics`
+accepts `redelivered` and `deadLettered` counters exposing `inc()`, without a
+Prometheus dependency. Transport logs never include payloads or error contents.
+
+Delivery is at least once. For signup-driven default teams, enforce idempotency
+in persistent storage using the user's stable ID and a database uniqueness
+constraint/transaction. Auth's signup publication and org's team creation are
+separate future work; this transport neither publishes signup events nor creates
+teams. A GraphQL-only global authentication guard must also be scoped correctly
+before registering message handlers in a hybrid org application.
+
+#### Release and consumer migration
+
+Release `@mxspl/nestjs-common` 0.3.0 before deploying the notification-service
+migration or adding this transport to org-service. Then run
+`pnpm add --save-exact @mxspl/nestjs-common@0.3.0` in each adopting service and
+commit its registry-generated lockfile. Do not replace registry dependencies
+with sibling paths. Existing logging, authentication, and GraphQL consumers can
+remain on their current version. Notification-service keeps OTP-specific
+retention, failure classification, failure envelopes, and metrics in its own
+transport options factory.
 
 ### JWT authentication
 

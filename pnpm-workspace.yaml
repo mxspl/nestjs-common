@@ -1,3 +1,5 @@
 allowBuilds:
   '@nestjs/core': true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@nestjs/microservices@12.1.1'
