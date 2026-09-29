@@ -48,6 +48,22 @@ These instructions apply to the whole repository.
 - Lint and format: `pnpm run lint`
 - Test: `pnpm run test`
 - Coverage: `pnpm run test:cov`
+- Publish/release: `pnpm run release`
+
+## Versioning and publishing
+
+- Do not manually bump the package version while editing this library, including
+  `package.json`, lockfiles, or release metadata. Do not assume the next version
+  in documentation or consumer dependency pins.
+- Use `pnpm run release` from this repository to publish. The configured release
+  tool owns version selection, changelog updates, the release commit, and tag;
+  the script pushes to GitHub, where the publication workflow runs.
+- Run the required checks and commit the intended source changes before release.
+  Preserve unrelated work; the release script does not automatically include
+  arbitrary uncommitted changes.
+- Do not bypass the script with direct `npm publish`, `pnpm publish`, manual tags,
+  or separate version-bump commands. Verify publication and use the actual
+  released version when upgrading consumers and regenerating their lockfiles.
 
 ## Agent Expectations
 
