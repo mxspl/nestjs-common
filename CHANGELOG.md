@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.7](https://github.com/mxspl/nestjs-common/compare/v0.2.6...v0.2.7) (2026-09-30)
+
+
+### Features
+
+* allow custom transport identifier for JetStream server ([9f43e09](https://github.com/mxspl/nestjs-common/commit/9f43e095637d33425a6a1685f7d706ab615a6a78))
+
 ### [0.2.6](https://github.com/mxspl/nestjs-common/compare/v0.2.5...v0.2.6) (2026-09-28)
 
 
