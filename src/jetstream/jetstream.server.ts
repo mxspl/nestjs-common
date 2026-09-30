@@ -39,7 +39,7 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
     > = new JsonLogger(),
   ) {
     super();
-    this.transportId = JETSTREAM_TRANSPORT;
+    this.transportId = options.transportId ?? JETSTREAM_TRANSPORT;
   }
   override on() {
     throw new Error('Use the transport health check for connection status.');

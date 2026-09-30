@@ -13,6 +13,7 @@ export interface JetStreamFailure {
 }
 
 export interface JetStreamOptions {
+  transportId?: symbol;
   connection: Pick<ConnectionOptions, 'servers' | 'user' | 'pass' | 'token'>;
   stream: { name: string; maxAgeMs: number };
   durable: string;

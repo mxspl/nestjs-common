@@ -44,6 +44,11 @@ const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
 function server(overrides: Partial<JetStreamOptions> = {}) {
   return new ServerJetStream({ ...options, ...overrides }, logger);
 }
+
+it('uses the configured transport identity', () => {
+  const transportId = Symbol('PASSKEY_TRANSPORT');
+  expect(server({ transportId }).transportId).toBe(transportId);
+});
 function message(
   deliveryCount = 1,
   id = 'event-123',
