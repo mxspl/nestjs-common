@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.3.0](https://github.com/mxspl/nestjs-common/compare/v0.2.8...v0.3.0) (2026-10-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* the manageStreams option is removed and the transport never
+creates streams. Provision event and failure streams before startup.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+* stop creating JetStream streams in the transport ([e87790c](https://github.com/mxspl/nestjs-common/commit/e87790c59bca46fb1ab6af70c62768128ff1e148))
+
 ### [0.2.8](https://github.com/mxspl/nestjs-common/compare/v0.2.7...v0.2.8) (2026-10-01)
 
 
