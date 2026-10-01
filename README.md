@@ -105,7 +105,6 @@ const transport = new ServerJetStream({
   connection: { servers: ['nats://nats:4222'] },
   stream: { name: 'USER_EVENTS', maxAgeMs: 7 * 24 * 60 * 60 * 1000 },
   durable: 'org-default-team',
-  manageStreams: true,
   ackWaitMs: 60_000,
   maxDeliver: 5,
   retryDelayMs: 1000,
@@ -134,10 +133,12 @@ names and can replay retained events. Replicas share the durable name; separate
 services need distinct durable names to each receive events. Handler patterns
 must be string subjects; configured streams must list those exact subjects
 (including `subjectPrefix`, when used). Wildcard coverage in existing stream
-configuration is not inferred. `manageStreams: false` disables stream creation,
-but still inspects streams and creates/updates consumers. Existing stream
-retention must be positive and no longer than the configured `maxAgeMs`; stream
-configuration is never silently overwritten.
+configuration is not inferred. The transport never creates or updates streams:
+provision both the event stream and the failure stream before startup. It
+inspects them and creates/updates only its durable consumers. A missing stream,
+missing subject, or retention that is not positive or exceeds the configured
+`maxAgeMs` fails startup. Brokers need stream inspection, consumer management,
+consumption, acknowledgement, and failure publication permissions.
 
 The transport acknowledges only after a Promise or Observable handler completes.
 It extends the acknowledgement window while the handler runs. Unknown handler

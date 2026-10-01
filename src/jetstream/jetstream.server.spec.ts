@@ -8,7 +8,6 @@ const broker = vi.hoisted(() => ({
   publish: vi.fn(),
   connect: vi.fn(),
   streamInfo: vi.fn(),
-  streamAdd: vi.fn(),
   consumerAdd: vi.fn(),
   consumerGet: vi.fn(),
 }));
@@ -19,7 +18,7 @@ vi.mock('@nats-io/jetstream', async (original) => ({
     consumers: { get: broker.consumerGet },
   }),
   jetstreamManager: async () => ({
-    streams: { info: broker.streamInfo, add: broker.streamAdd },
+    streams: { info: broker.streamInfo },
     consumers: { add: broker.consumerAdd },
   }),
 }));
@@ -29,7 +28,6 @@ const options: JetStreamOptions = {
   connection: { servers: ['nats://broker:4222'] },
   stream: { name: 'USERS', maxAgeMs: 604_800_000 },
   durable: 'org-default-team',
-  manageStreams: false,
   subjectPrefix: 'test.',
   ackWaitMs: 1000,
   maxDeliver: 3,
@@ -314,6 +312,29 @@ it('fails startup and drains the connection for incompatible existing stream ret
   expect(broker.consumerAdd).not.toHaveBeenCalled();
   expect(connection.drain).toHaveBeenCalledOnce();
   expect(await transport.healthy()).toBe(false);
+});
+it('fails startup without creating streams when a stream is missing', async () => {
+  const { connection } = setupBroker();
+  broker.streamInfo.mockRejectedValue(new Error('stream not found'));
+  const transport = server();
+  transport.addHandler('users.signed-up', vi.fn(), true);
+  expect(await listen(transport)).toBeInstanceOf(Error);
+  expect(broker.streamInfo).toHaveBeenCalledWith('USERS');
+  expect(broker.consumerAdd).not.toHaveBeenCalled();
+  expect(connection.drain).toHaveBeenCalledOnce();
+});
+it('fails startup when the failure stream is missing', async () => {
+  const { connection } = setupBroker();
+  const streams = broker.streamInfo.getMockImplementation();
+  broker.streamInfo.mockImplementation(async (name: string) => {
+    if (name === 'FAILURES') throw new Error('stream not found');
+    return streams?.(name);
+  });
+  const transport = server();
+  transport.addHandler('users.signed-up', vi.fn(), true);
+  expect(await listen(transport)).toBeInstanceOf(Error);
+  expect(broker.consumerAdd).not.toHaveBeenCalled();
+  expect(connection.drain).toHaveBeenCalledOnce();
 });
 it('rejects startup without any event handlers', async () => {
   expect(await listen(server())).toBeInstanceOf(Error);

@@ -3,9 +3,6 @@ import {
   AckPolicy,
   type ConsumerMessages,
   DeliverPolicy,
-  JetStreamApiCodes,
-  JetStreamApiError,
-  type JetStreamManager,
   type JsMsg,
   jetstream,
   jetstreamManager,
@@ -77,33 +74,6 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
       },
     );
   }
-  private async ensureStream(
-    manager: JetStreamManager,
-    name: string,
-    subjects: string[],
-    maxAge: number,
-  ) {
-    try {
-      return await manager.streams.info(name);
-    } catch (error) {
-      if (
-        !(error instanceof JetStreamApiError) ||
-        error.code !== JetStreamApiCodes.StreamNotFound ||
-        !this.options.manageStreams
-      )
-        throw error;
-      try {
-        return await manager.streams.add({
-          name,
-          subjects,
-          max_age: maxAge,
-          duplicate_window: Math.min(maxAge, 120_000_000_000),
-        });
-      } catch {
-        return await manager.streams.info(name);
-      }
-    }
-  }
   private async start() {
     const patterns = [...this.messageHandlers.keys()];
     if (!patterns.length)
@@ -133,12 +103,8 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
     const subjects = patterns.map(
       (pattern) => (this.options.subjectPrefix ?? '') + pattern,
     );
-    const info = await this.ensureStream(
-      manager,
-      this.options.stream.name,
-      subjects,
-      this.options.stream.maxAgeMs * 1_000_000,
-    );
+    // Streams are provisioned by infrastructure; only inspect them here.
+    const info = await manager.streams.info(this.options.stream.name);
     if (
       !subjects.every((subject) => info.config.subjects?.includes(subject)) ||
       info.config.max_age <= 0 ||
@@ -147,11 +113,8 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
       throw new Error(
         'Stream must cover handler subjects within the configured retention',
       );
-    const failureInfo = await this.ensureStream(
-      manager,
+    const failureInfo = await manager.streams.info(
       this.options.deadLetter.stream,
-      [(this.options.subjectPrefix ?? '') + this.options.deadLetter.subject],
-      this.options.deadLetter.maxAgeMs * 1_000_000,
     );
     if (
       !failureInfo.config.subjects?.includes(

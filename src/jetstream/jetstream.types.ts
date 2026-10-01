@@ -15,15 +15,15 @@ export interface JetStreamFailure {
 export interface JetStreamOptions {
   transportId?: symbol;
   connection: Pick<ConnectionOptions, 'servers' | 'user' | 'pass' | 'token'>;
+  /** Must already exist; subjects and retention are validated at startup. */
   stream: { name: string; maxAgeMs: number };
   durable: string;
-  /** Create missing streams. Existing subjects and retention are validated. */
-  manageStreams: boolean;
   subjectPrefix?: string;
   ackWaitMs: number;
   /** Maximum handler attempts; failure publication may retry beyond this. */
   maxDeliver: number;
   retryDelayMs: number;
+  /** The failure stream must already exist and cover `subject`. */
   deadLetter: {
     stream: string;
     subject: string;
