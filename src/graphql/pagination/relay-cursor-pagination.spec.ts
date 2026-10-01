@@ -19,14 +19,19 @@ type QueryBuilderMock = {
   take: ReturnType<typeof vi.fn>;
   andWhere: ReturnType<typeof vi.fn>;
   getMany: ReturnType<typeof vi.fn>;
+  clone: ReturnType<typeof vi.fn>;
+};
+
+type CountQueryBuilderMock = {
+  getCount: ReturnType<typeof vi.fn>;
 };
 
 describe('buildRelayConnection', () => {
   let repository: {
     createQueryBuilder: ReturnType<typeof vi.fn>;
-    count: ReturnType<typeof vi.fn>;
   };
   let queryBuilder: QueryBuilderMock;
+  let countQueryBuilder: CountQueryBuilderMock;
 
   beforeEach(() => {
     queryBuilder = {
@@ -36,6 +41,10 @@ describe('buildRelayConnection', () => {
       take: vi.fn(),
       andWhere: vi.fn(),
       getMany: vi.fn(),
+      clone: vi.fn(),
+    };
+    countQueryBuilder = {
+      getCount: vi.fn(),
     };
 
     queryBuilder.where.mockReturnValue(queryBuilder);
@@ -43,16 +52,16 @@ describe('buildRelayConnection', () => {
     queryBuilder.addOrderBy.mockReturnValue(queryBuilder);
     queryBuilder.take.mockReturnValue(queryBuilder);
     queryBuilder.andWhere.mockReturnValue(queryBuilder);
+    queryBuilder.clone.mockReturnValue(countQueryBuilder);
 
     repository = {
       createQueryBuilder: vi.fn().mockReturnValue(queryBuilder),
-      count: vi.fn(),
     };
   });
 
   it('should use default page size when first is not provided', async () => {
     queryBuilder.getMany.mockResolvedValue([]);
-    repository.count.mockResolvedValue(0);
+    countQueryBuilder.getCount.mockResolvedValue(0);
 
     const result = await buildRelayConnection<NodeRow, EdgeRow>({
       repository: repository as unknown as Repository<NodeRow>,
@@ -72,7 +81,7 @@ describe('buildRelayConnection', () => {
       JSON.stringify({ id: 'n-1', createdAt: '2026-05-01T00:00:00.000Z' }),
     ).toString('base64');
     queryBuilder.getMany.mockResolvedValue([]);
-    repository.count.mockResolvedValue(0);
+    countQueryBuilder.getCount.mockResolvedValue(0);
 
     const result = await buildRelayConnection<NodeRow, EdgeRow>({
       repository: repository as unknown as Repository<NodeRow>,
@@ -116,7 +125,7 @@ describe('buildRelayConnection', () => {
       ),
     }));
     queryBuilder.getMany.mockResolvedValue(rows);
-    repository.count.mockResolvedValue(500);
+    countQueryBuilder.getCount.mockResolvedValue(500);
 
     const result = await buildRelayConnection<NodeRow, EdgeRow>({
       repository: repository as unknown as Repository<NodeRow>,
@@ -183,7 +192,57 @@ describe('buildRelayConnection', () => {
       ownerId: 'user-1',
     });
     expect(getTotalCount).toHaveBeenCalledTimes(1);
-    expect(repository.count).not.toHaveBeenCalled();
+    expect(countQueryBuilder.getCount).not.toHaveBeenCalled();
     expect(result.totalCount).toBe(3);
+  });
+
+  it('should count rows matching configured filters', async () => {
+    queryBuilder.getMany.mockResolvedValue([]);
+    countQueryBuilder.getCount.mockResolvedValue(2);
+
+    const result = await buildRelayConnection<NodeRow, EdgeRow>({
+      repository: repository as unknown as Repository<NodeRow>,
+      alias: 'node',
+      configureQuery: (builder) => {
+        builder.andWhere('node.name = :name', { name: 'alpha' });
+      },
+      toEdge: (node, cursor) => ({ node, cursor }),
+    });
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('node.name = :name', {
+      name: 'alpha',
+    });
+    expect(queryBuilder.andWhere.mock.invocationCallOrder[0]).toBeLessThan(
+      queryBuilder.clone.mock.invocationCallOrder[0],
+    );
+    expect(countQueryBuilder.getCount).toHaveBeenCalledTimes(1);
+    expect(result.totalCount).toBe(2);
+  });
+
+  it('should count before applying cursor, ordering and limit', async () => {
+    const after = Buffer.from(
+      JSON.stringify({ id: 'n-1', createdAt: '2026-05-01T00:00:00.000Z' }),
+    ).toString('base64');
+    queryBuilder.getMany.mockResolvedValue([]);
+    countQueryBuilder.getCount.mockResolvedValue(7);
+
+    const result = await buildRelayConnection<NodeRow, EdgeRow>({
+      repository: repository as unknown as Repository<NodeRow>,
+      alias: 'node',
+      after,
+      toEdge: (node, cursor) => ({ node, cursor }),
+    });
+
+    const cloneOrder = queryBuilder.clone.mock.invocationCallOrder[0];
+    expect(cloneOrder).toBeLessThan(
+      queryBuilder.andWhere.mock.invocationCallOrder[0],
+    );
+    expect(cloneOrder).toBeLessThan(
+      queryBuilder.orderBy.mock.invocationCallOrder[0],
+    );
+    expect(cloneOrder).toBeLessThan(
+      queryBuilder.take.mock.invocationCallOrder[0],
+    );
+    expect(result.totalCount).toBe(7);
   });
 });

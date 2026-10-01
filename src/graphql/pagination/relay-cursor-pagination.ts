@@ -49,6 +49,8 @@ export async function buildRelayConnection<TNode extends CursorNode, TEdge>({
 
   const queryBuilder = repository.createQueryBuilder(alias);
   configureQuery?.(queryBuilder);
+  // Count the configured (filtered) query before cursor, ordering and limit.
+  const countQueryBuilder = queryBuilder.clone();
 
   if (decodedAfterCursor) {
     queryBuilder.andWhere(
@@ -71,10 +73,10 @@ export async function buildRelayConnection<TNode extends CursorNode, TEdge>({
     .addOrderBy(`${alias}.id`, 'ASC')
     .take(pageSize + 1);
 
-  const rows = await queryBuilder.getMany();
-  const totalCount = getTotalCount
-    ? await getTotalCount()
-    : await repository.count();
+  const [rows, totalCount] = await Promise.all([
+    queryBuilder.getMany(),
+    getTotalCount ? getTotalCount() : countQueryBuilder.getCount(),
+  ]);
 
   const hasNextPage = rows.length > pageSize;
   const nodes = hasNextPage ? rows.slice(0, pageSize) : rows;
