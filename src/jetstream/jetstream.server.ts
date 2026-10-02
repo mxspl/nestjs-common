@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   AckPolicy,
   type ConsumerMessages,
@@ -16,6 +15,12 @@ import {
   type JetStreamOptions,
 } from './jetstream.types.js';
 import { JetStreamContext } from './jetstream-context.js';
+import {
+  durableNameFor,
+  failureSubjectFor,
+  streamNameFor,
+  subjectMatches,
+} from './naming.js';
 
 type Handler = NonNullable<ReturnType<Server['getHandlerByPattern']>>;
 
@@ -78,6 +83,23 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
     const patterns = [...this.messageHandlers.keys()];
     if (!patterns.length)
       throw new Error('No JetStream event handlers registered');
+    const prefix = this.options.subjectPrefix ?? '';
+    const subjects = patterns.map((pattern) => prefix + pattern);
+    // Names derive from subjects; invalid names fail before connecting.
+    const streams = new Set(subjects.map(streamNameFor));
+    if (streams.size !== 1)
+      throw new Error(
+        'JetStream handlers in one transport must share a stream',
+      );
+    const [stream] = streams;
+    const failureSubject = failureSubjectFor(
+      subjects[0],
+      this.options.serviceName,
+    );
+    const failureStream = streamNameFor(failureSubject);
+    const durables = patterns.map((pattern) =>
+      durableNameFor(this.options.serviceName, pattern),
+    );
     this.connection = await connect({
       ...this.options.connection,
       timeout: 2000,
@@ -100,52 +122,43 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
       this.connected = false;
     });
     const manager = await jetstreamManager(nc, { timeout: 2000 });
-    const subjects = patterns.map(
-      (pattern) => (this.options.subjectPrefix ?? '') + pattern,
-    );
+    const covers = (filters: string[] | undefined, subject: string) =>
+      filters?.some((filter) => subjectMatches(filter, subject)) ?? false;
     // Streams are provisioned by infrastructure; only inspect them here.
-    const info = await manager.streams.info(this.options.stream.name);
+    const info = await manager.streams.info(stream);
     if (
-      !subjects.every((subject) => info.config.subjects?.includes(subject)) ||
+      !subjects.every((subject) => covers(info.config.subjects, subject)) ||
       info.config.max_age <= 0 ||
       info.config.max_age > this.options.stream.maxAgeMs * 1_000_000
     )
       throw new Error(
         'Stream must cover handler subjects within the configured retention',
       );
-    const failureInfo = await manager.streams.info(
-      this.options.deadLetter.stream,
-    );
+    const failureInfo = await manager.streams.info(failureStream);
     if (
-      !failureInfo.config.subjects?.includes(
-        (this.options.subjectPrefix ?? '') + this.options.deadLetter.subject,
-      ) ||
+      !covers(failureInfo.config.subjects, failureSubject) ||
       failureInfo.config.max_age <= 0 ||
       failureInfo.config.max_age > this.options.deadLetter.maxAgeMs * 1_000_000
     )
       throw new Error(
         'Failure stream must cover its subject within the configured retention',
       );
-    for (const [pattern, handler] of this.messageHandlers) {
-      const durable =
-        patterns.length === 1
-          ? this.options.durable
-          : `${this.options.durable}-${createHash('sha256').update(pattern).digest('hex').slice(0, 10)}`;
-      await manager.consumers.add(this.options.stream.name, {
+    for (const [index, [pattern, handler]] of [
+      ...this.messageHandlers,
+    ].entries()) {
+      const durable = durables[index];
+      await manager.consumers.add(stream, {
         durable_name: durable,
         ack_policy: AckPolicy.Explicit,
         deliver_policy: DeliverPolicy.All,
-        filter_subject: (this.options.subjectPrefix ?? '') + pattern,
+        filter_subject: prefix + pattern,
         ack_wait: this.options.ackWaitMs * 1_000_000,
         max_ack_pending: 1,
         // Bound handler attempts, but allow failure publication to retry
         // if the broker is temporarily unavailable at the exhaustion boundary.
         max_deliver: -1,
       });
-      const consumer = await jetstream(nc).consumers.get(
-        this.options.stream.name,
-        durable,
-      );
+      const consumer = await jetstream(nc).consumers.get(stream, durable);
       const messages = await consumer.consume({ max_messages: 1 });
       this.consumers.push(messages);
       this.loops.push(this.consume(messages, handler));
@@ -219,11 +232,9 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
   }
   private async deadLetter(message: JsMsg) {
     try {
-      const id = message.headers?.get('Nats-Msg-Id');
       const failure = {
-        messageId: id && /^[A-Za-z0-9_-]{1,128}$/.test(id) ? id : undefined,
         sourceSubject: message.subject,
-        sourceStream: this.options.stream.name,
+        sourceStream: message.info.stream,
         sourceSequence: message.info.streamSequence,
         attempts: message.info.deliveryCount,
         reason: 'retry_exhausted' as const,
@@ -234,10 +245,10 @@ export class ServerJetStream extends Server implements CustomTransportStrategy {
       // Consumption starts only after a connection has been established.
       // biome-ignore lint/style/noNonNullAssertion: connection lives until consumption stops
       await jetstream(this.connection!, { timeout: 2000 }).publish(
-        (this.options.subjectPrefix ?? '') + this.options.deadLetter.subject,
+        failureSubjectFor(message.subject, this.options.serviceName),
         JSON.stringify(payload),
         {
-          msgID: `${this.options.stream.name}-${this.options.durable}-${message.info.streamSequence}`,
+          msgID: `${message.info.stream}-${message.info.consumer}-${message.info.streamSequence}`,
         },
       );
       message.term('retry_exhausted');

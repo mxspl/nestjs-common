@@ -101,18 +101,15 @@ import { ServerJetStream } from '@mxspl/nestjs-common/jetstream';
 
 // Illustrative configuration for a future signup consumer, not an existing
 // event contract. Define the shared schema and publish it from auth first.
+// Handlers for `user.account.*` consume stream `USER_ACCOUNT`.
 const transport = new ServerJetStream({
   connection: { servers: ['nats://nats:4222'] },
-  stream: { name: 'USER_EVENTS', maxAgeMs: 7 * 24 * 60 * 60 * 1000 },
-  durable: 'org-default-team',
+  serviceName: 'org-service',
+  stream: { maxAgeMs: 7 * 24 * 60 * 60 * 1000 },
   ackWaitMs: 60_000,
   maxDeliver: 5,
   retryDelayMs: 1000,
-  deadLetter: {
-    stream: 'ORG_EVENT_FAILURES',
-    subject: 'org.events.failed',
-    maxAgeMs: 7 * 24 * 60 * 60 * 1000,
-  },
+  deadLetter: { maxAgeMs: 7 * 24 * 60 * 60 * 1000 },
 });
 app.connectMicroservice({ strategy: transport });
 await app.init();
@@ -125,20 +122,40 @@ injection, register a factory provider for `ServerJetStream` and pass
 connection and consumption loops; enable Nest shutdown hooks to stop pulling,
 finish in-flight handlers, and drain the connection on shutdown.
 
-Each handler pattern gets a durable pull consumer, with one in-flight message
-per pattern and explicit acknowledgements. A single pattern uses `durable`
-verbatim; multiple patterns append a stable hash of each pattern. Keep this
-handler set stable: moving between one and multiple patterns changes durable
-names and can replay retained events. Replicas share the durable name; separate
-services need distinct durable names to each receive events. Handler patterns
-must be string subjects; configured streams must list those exact subjects
-(including `subjectPrefix`, when used). Wildcard coverage in existing stream
-configuration is not inferred. The transport never creates or updates streams:
-provision both the event stream and the failure stream before startup. It
-inspects them and creates/updates only its durable consumers. A missing stream,
-missing subject, or retention that is not positive or exceeds the configured
-`maxAgeMs` fails startup. Brokers need stream inspection, consumer management,
-consumption, acknowledgement, and failure publication permissions.
+Stream, failure, and consumer names derive from handler subjects. Subjects use
+`<domain>.<entity>.<event>`: at least three lowercase tokens of letters, digits,
+and hyphens. `failure` is reserved and cannot be an event token. The helpers
+`streamNameFor`, `failureSubjectFor`, `durableNameFor`, and `subjectMatches`
+are exported from `@mxspl/nestjs-common/jetstream`.
+
+| Name | Rule | Example |
+| --- | --- | --- |
+| Stream | Every subject token except the last, upper snake case | `auth.otp.requested` → `AUTH_OTP` |
+| Failure subject | `<domain>.<entity>.failure.<serviceName>` | `auth.otp.failure.notification-service` |
+| Failure stream | The stream rule applied to the failure subject | `AUTH_OTP_FAILURE` |
+| Durable | `<serviceName>_` + subject with dots as hyphens | `notification-service_auth-otp-requested` |
+
+`subjectPrefix` is part of every derived stream and subject, so
+`test.e2e.` isolates tests in `TEST_E2E_AUTH_OTP`. All handlers in one
+transport must derive the same stream, because `stream.maxAgeMs` bounds that
+stream's retention; use one transport per stream. Invalid subjects or handlers
+spanning streams fail startup before connecting.
+
+Each handler subject gets its own durable pull consumer, with one in-flight
+message per subject and explicit acknowledgements. Replicas of a service share
+durable names; different services get different durables and each receive
+every event. Renaming the service or a subject creates a new durable that
+replays retained events.
+
+The transport never creates or updates streams: provision the event stream and
+the failure stream before startup. Stream subject filters may use NATS
+wildcards, for example `auth.otp.*` and `auth.otp.failure.*`; `*` matches one
+token, so event and failure subjects never overlap. A missing stream, a filter
+that does not cover a handler or failure subject, or retention that is not
+positive or exceeds the configured `maxAgeMs` fails startup. The transport
+creates/updates only its durable consumers. Brokers need stream inspection,
+consumer management, consumption, acknowledgement, and failure publication
+permissions.
 
 The transport acknowledges only after a Promise or Observable handler completes.
 It extends the acknowledgement window while the handler runs. Unknown handler
@@ -150,9 +167,10 @@ sent to the broker. Invalid JSON terminates before the handler runs.
 After `maxDeliver` handler attempts, a failure record is published before the
 source message is terminated. Publication failures retry without invoking the
 handler again. Broker redelivery is therefore unlimited, bounded by stream
-retention. Default failure records contain only `messageId`, source subject,
-stream/sequence, attempts, `retry_exhausted`, and a timestamp. IDs outside the
-safe correlation-ID format are omitted. `deadLetter.createPayload` can adapt
+retention. Default failure records contain only the source subject,
+stream/sequence, attempts, `retry_exhausted`, and a timestamp; use the stream
+and sequence to inspect the original message while it is retained.
+`deadLetter.createPayload` can adapt
 this metadata to a service's existing failure contract. Optional `metrics`
 accepts `redelivered` and `deadLettered` counters exposing `inc()`, without a
 Prometheus dependency. Transport logs never include payloads or error contents.

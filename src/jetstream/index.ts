@@ -5,3 +5,9 @@ export {
   type JetStreamOptions,
 } from './jetstream.types.js';
 export { JetStreamContext } from './jetstream-context.js';
+export {
+  durableNameFor,
+  failureSubjectFor,
+  streamNameFor,
+  subjectMatches,
+} from './naming.js';

@@ -3,7 +3,6 @@ import type { ConnectionOptions } from '@nats-io/transport-node';
 export const JETSTREAM_TRANSPORT = Symbol('JETSTREAM_TRANSPORT');
 
 export interface JetStreamFailure {
-  messageId?: string;
   sourceSubject: string;
   sourceStream: string;
   sourceSequence: number;
@@ -15,18 +14,25 @@ export interface JetStreamFailure {
 export interface JetStreamOptions {
   transportId?: symbol;
   connection: Pick<ConnectionOptions, 'servers' | 'user' | 'pass' | 'token'>;
-  /** Must already exist; subjects and retention are validated at startup. */
-  stream: { name: string; maxAgeMs: number };
-  durable: string;
+  /**
+   * Lowercase kebab-case name of the consuming service. Durable consumers are
+   * `<serviceName>_<subject-with-hyphens>` and failure records are published
+   * to `<domain>.<entity>.failure.<serviceName>`.
+   */
+  serviceName: string;
+  /**
+   * Retention bound for the stream derived from the handler subjects
+   * (`auth.otp.requested` → `AUTH_OTP`). The stream must already exist; its
+   * subjects and retention are validated at startup.
+   */
+  stream: { maxAgeMs: number };
   subjectPrefix?: string;
   ackWaitMs: number;
   /** Maximum handler attempts; failure publication may retry beyond this. */
   maxDeliver: number;
   retryDelayMs: number;
-  /** The failure stream must already exist and cover `subject`. */
+  /** The derived failure stream (`AUTH_OTP_FAILURE`) must already exist. */
   deadLetter: {
-    stream: string;
-    subject: string;
     maxAgeMs: number;
     /** Receives metadata only. Do not include sensitive data in failure records. */
     createPayload?: (failure: JetStreamFailure) => unknown;

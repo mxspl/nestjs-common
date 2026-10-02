@@ -26,17 +26,13 @@ vi.mock('@nats-io/transport-node', () => ({ connect: broker.connect }));
 
 const options: JetStreamOptions = {
   connection: { servers: ['nats://broker:4222'] },
-  stream: { name: 'USERS', maxAgeMs: 604_800_000 },
-  durable: 'org-default-team',
+  serviceName: 'org-service',
+  stream: { maxAgeMs: 604_800_000 },
   subjectPrefix: 'test.',
   ackWaitMs: 1000,
   maxDeliver: 3,
   retryDelayMs: 100,
-  deadLetter: {
-    stream: 'FAILURES',
-    subject: 'users.failed',
-    maxAgeMs: 86_400_000,
-  },
+  deadLetter: { maxAgeMs: 86_400_000 },
 };
 const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
 function server(overrides: Partial<JetStreamOptions> = {}) {
@@ -53,10 +49,15 @@ function message(
   data = '{"userId":"user-123"}',
 ) {
   return {
-    subject: 'test.users.signed-up',
+    subject: 'test.user.account.signed-up',
     string: () => data,
     headers: { get: () => id },
-    info: { deliveryCount, streamSequence: 42 },
+    info: {
+      deliveryCount,
+      streamSequence: 42,
+      stream: 'TEST_USER_ACCOUNT',
+      consumer: 'org-service_user-account-signed-up',
+    },
     ack: vi.fn(),
     nak: vi.fn(),
     term: vi.fn(),
@@ -178,40 +179,43 @@ it('publishes metadata before terminating and never reruns exhausted handlers', 
   expect(handler).toHaveBeenCalledTimes(1);
   expect(retry.term).toHaveBeenCalledWith('retry_exhausted');
   const [subject, data, publishOptions] = broker.publish.mock.calls[1];
-  expect(subject).toBe('test.users.failed');
+  expect(subject).toBe('test.user.account.failure.org-service');
   expect(JSON.parse(data)).toEqual({
-    messageId: 'event-123',
-    sourceSubject: 'test.users.signed-up',
-    sourceStream: 'USERS',
+    sourceSubject: 'test.user.account.signed-up',
+    sourceStream: 'TEST_USER_ACCOUNT',
     sourceSequence: 42,
     attempts: 4,
     reason: 'retry_exhausted',
     occurredAt: expect.any(String),
   });
-  expect(publishOptions).toEqual({ msgID: 'USERS-org-default-team-42' });
+  expect(publishOptions).toEqual({
+    msgID: 'TEST_USER_ACCOUNT-org-service_user-account-signed-up-42',
+  });
   expect(metrics.deadLettered.inc).toHaveBeenCalledOnce();
   expect(metrics.redelivered.inc).toHaveBeenCalledTimes(2);
 });
 it('allows service failure envelopes without passing raw event data', async () => {
-  const createPayload = vi.fn(({ messageId }) => ({ requestId: messageId }));
+  const createPayload = vi.fn(({ sourceSequence }) => ({
+    sequence: sourceSequence,
+  }));
   await server({
     deadLetter: { ...options.deadLetter, createPayload },
   }).processMessage(message(4), vi.fn());
   expect(createPayload.mock.calls[0][0]).not.toHaveProperty('userId');
   expect(JSON.parse(broker.publish.mock.calls[0][1])).toEqual({
-    requestId: 'event-123',
+    sequence: 42,
   });
 });
-it('does not copy unsafe message IDs into failure records', async () => {
+it('keeps message IDs and payloads out of failure records', async () => {
   await server().processMessage(message(4, 'private@example.test'), vi.fn());
-  expect(JSON.parse(broker.publish.mock.calls[0][1])).not.toHaveProperty(
-    'messageId',
-  );
+  const record = broker.publish.mock.calls[0][1];
+  expect(record).not.toContain('private@example.test');
+  expect(record).not.toContain('user-123');
 });
 it('exposes message metadata in the Nest context', () => {
   const context = new JetStreamContext(message(3));
   expect(context.msgId).toBe('event-123');
-  expect(context.subject).toBe('test.users.signed-up');
+  expect(context.subject).toBe('test.user.account.signed-up');
   expect(context.deliveryCount).toBe(3);
   expect(context.redeliveryCount).toBe(2);
   expect(context.headers?.get('Nats-Msg-Id')).toBe('event-123');
@@ -232,11 +236,11 @@ function setupBroker() {
   broker.streamInfo.mockImplementation(async (name: string) => ({
     config: {
       subjects:
-        name === 'USERS'
-          ? ['test.users.signed-up', 'test.users.deleted']
-          : ['test.users.failed'],
+        name === 'TEST_USER_ACCOUNT'
+          ? ['test.user.account.*']
+          : ['test.user.account.failure.*'],
       max_age:
-        (name === 'USERS'
+        (name === 'TEST_USER_ACCOUNT'
           ? options.stream.maxAgeMs
           : options.deadLetter.maxAgeMs) * 1_000_000,
     },
@@ -268,14 +272,16 @@ function setupBroker() {
 it('uses service retention, filtered durable consumers, readiness and graceful close', async () => {
   const { connection, consumers } = setupBroker();
   const transport = server();
-  transport.addHandler('users.signed-up', vi.fn(), true);
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
   expect(await transport.healthy()).toBe(false);
   expect(await listen(transport)).toBeUndefined();
+  expect(broker.streamInfo).toHaveBeenCalledWith('TEST_USER_ACCOUNT');
+  expect(broker.streamInfo).toHaveBeenCalledWith('TEST_USER_ACCOUNT_FAILURE');
   expect(broker.consumerAdd).toHaveBeenCalledWith(
-    'USERS',
+    'TEST_USER_ACCOUNT',
     expect.objectContaining({
-      durable_name: 'org-default-team',
-      filter_subject: 'test.users.signed-up',
+      durable_name: 'org-service_user-account-signed-up',
+      filter_subject: 'test.user.account.signed-up',
       ack_wait: 1_000_000_000,
       max_deliver: -1,
     }),
@@ -286,28 +292,77 @@ it('uses service retention, filtered durable consumers, readiness and graceful c
   expect(connection.drain).toHaveBeenCalledOnce();
   expect(await transport.healthy()).toBe(false);
 });
-it('creates separate stable durables for multiple handler subjects', async () => {
+it('names one durable per handler subject after the service', async () => {
   setupBroker();
   const transport = server();
-  transport.addHandler('users.signed-up', vi.fn(), true);
-  transport.addHandler('users.deleted', vi.fn(), true);
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
+  transport.addHandler('user.account.deleted', vi.fn(), true);
   expect(await listen(transport)).toBeUndefined();
-  const names = broker.consumerAdd.mock.calls.map(
-    ([, config]) => config.durable_name,
-  );
-  expect(new Set(names).size).toBe(2);
   expect(
-    names.every((name) => /^org-default-team-[0-9a-f]{10}$/.test(name)),
-  ).toBe(true);
+    broker.consumerAdd.mock.calls.map(([, config]) => config.durable_name),
+  ).toEqual([
+    'org-service_user-account-signed-up',
+    'org-service_user-account-deleted',
+  ]);
+  expect(broker.consumerGet).toHaveBeenCalledWith(
+    'TEST_USER_ACCOUNT',
+    'org-service_user-account-deleted',
+  );
   await transport.close();
+});
+it('accepts streams that list exact subjects', async () => {
+  setupBroker();
+  broker.streamInfo.mockImplementation(async (name: string) => ({
+    config: {
+      subjects:
+        name === 'TEST_USER_ACCOUNT'
+          ? ['test.user.account.signed-up']
+          : ['test.user.account.failure.org-service'],
+      max_age: 86_400_000_000_000,
+    },
+  }));
+  const transport = server();
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
+  expect(await listen(transport)).toBeUndefined();
+  await transport.close();
+});
+it('fails startup when the stream does not cover a handler subject', async () => {
+  const { connection } = setupBroker();
+  broker.streamInfo.mockResolvedValue({
+    config: { subjects: ['test.user.account.signed-up'], max_age: 1 },
+  });
+  const transport = server();
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
+  transport.addHandler('user.account.deleted', vi.fn(), true);
+  expect(await listen(transport)).toBeInstanceOf(Error);
+  expect(broker.consumerAdd).not.toHaveBeenCalled();
+  expect(connection.drain).toHaveBeenCalledOnce();
+});
+it('rejects handlers from different streams before connecting', async () => {
+  setupBroker();
+  const transport = server();
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
+  transport.addHandler('auth.otp.requested', vi.fn(), true);
+  expect(await listen(transport)).toBeInstanceOf(Error);
+  expect(broker.connect).not.toHaveBeenCalled();
+});
+it.each([
+  'users.signed-up',
+  'user.account.failure',
+])('rejects the unconventional subject %s before connecting', async (subject) => {
+  setupBroker();
+  const transport = server();
+  transport.addHandler(subject, vi.fn(), true);
+  expect(await listen(transport)).toBeInstanceOf(Error);
+  expect(broker.connect).not.toHaveBeenCalled();
 });
 it('fails startup and drains the connection for incompatible existing stream retention', async () => {
   const { connection } = setupBroker();
   broker.streamInfo.mockResolvedValue({
-    config: { subjects: ['test.users.signed-up'], max_age: 0 },
+    config: { subjects: ['test.user.account.signed-up'], max_age: 0 },
   });
   const transport = server();
-  transport.addHandler('users.signed-up', vi.fn(), true);
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
   expect(await listen(transport)).toBeInstanceOf(Error);
   expect(broker.consumerAdd).not.toHaveBeenCalled();
   expect(connection.drain).toHaveBeenCalledOnce();
@@ -317,9 +372,9 @@ it('fails startup without creating streams when a stream is missing', async () =
   const { connection } = setupBroker();
   broker.streamInfo.mockRejectedValue(new Error('stream not found'));
   const transport = server();
-  transport.addHandler('users.signed-up', vi.fn(), true);
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
   expect(await listen(transport)).toBeInstanceOf(Error);
-  expect(broker.streamInfo).toHaveBeenCalledWith('USERS');
+  expect(broker.streamInfo).toHaveBeenCalledWith('TEST_USER_ACCOUNT');
   expect(broker.consumerAdd).not.toHaveBeenCalled();
   expect(connection.drain).toHaveBeenCalledOnce();
 });
@@ -327,11 +382,12 @@ it('fails startup when the failure stream is missing', async () => {
   const { connection } = setupBroker();
   const streams = broker.streamInfo.getMockImplementation();
   broker.streamInfo.mockImplementation(async (name: string) => {
-    if (name === 'FAILURES') throw new Error('stream not found');
+    if (name === 'TEST_USER_ACCOUNT_FAILURE')
+      throw new Error('stream not found');
     return streams?.(name);
   });
   const transport = server();
-  transport.addHandler('users.signed-up', vi.fn(), true);
+  transport.addHandler('user.account.signed-up', vi.fn(), true);
   expect(await listen(transport)).toBeInstanceOf(Error);
   expect(broker.consumerAdd).not.toHaveBeenCalled();
   expect(connection.drain).toHaveBeenCalledOnce();
