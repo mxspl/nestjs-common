@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.4.0](https://github.com/mxspl/nestjs-common/compare/v0.3.0...v0.4.0) (2026-10-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* JetStreamOptions replaces stream.name and durable with
+serviceName, and deadLetter.stream/subject are removed. Failure records no
+longer include messageId. Durable names change, so new durables replay
+retained events.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### Features
+
+* derive JetStream stream, failure, and durable names from subjects ([2daa4d1](https://github.com/mxspl/nestjs-common/commit/2daa4d1b6349d9b5598fe8c0422b9cacde5ec1bf))
+
 ## [0.3.0](https://github.com/mxspl/nestjs-common/compare/v0.2.8...v0.3.0) (2026-10-01)
 
 
